@@ -38,33 +38,39 @@ describe("api routes", () => {
       const detailResponse = await fetch(`${baseUrl}/events/${eventId}`);
       expect(detailResponse.status).toBe(200);
 
-      const registerResponse = await fetch(`${baseUrl}/events/${eventId}/registrations`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          contact_name: "Jerry",
-          contact_phone: "13800000000",
-          attendee_count: 1,
-          source_channel: "miniapp"
-        })
-      });
+      const registerResponse = await fetch(
+        `${baseUrl}/events/${eventId}/registrations`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            contact_name: "Jerry",
+            contact_phone: "13800000000",
+            attendee_count: 1,
+            source_channel: "miniapp"
+          })
+        }
+      );
       const registerData = await registerResponse.json();
       expect(registerResponse.status).toBe(201);
       expect(registerData.data.ticket.ticket_code).toContain("TZL");
 
-      const invalidRegistration = await fetch(`${baseUrl}/events/${eventId}/registrations`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          contact_name: "",
-          contact_phone: "1",
-          attendee_count: 0
-        })
-      });
+      const invalidRegistration = await fetch(
+        `${baseUrl}/events/${eventId}/registrations`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            contact_name: "",
+            contact_phone: "1",
+            attendee_count: 0
+          })
+        }
+      );
       expect(invalidRegistration.status).toBe(400);
 
       const postsResponse = await fetch(`${baseUrl}/discover/posts`);
@@ -96,6 +102,50 @@ describe("api routes", () => {
         `${baseUrl}/places/${placesData.data.items[0]._id}`
       );
       expect(placeDetailResponse.status).toBe(200);
+
+      const markersBeforeResponse = await fetch(
+        `${baseUrl}/places/map-markers`
+      );
+      const markersBeforeData = await markersBeforeResponse.json();
+      expect(markersBeforeResponse.status).toBe(200);
+      expect(markersBeforeData.data.length).toBeGreaterThan(0);
+      expect(markersBeforeData.data[0]).toHaveProperty("category_level_1");
+      expect(markersBeforeData.data[0]).not.toHaveProperty("address_zh");
+
+      const createDraftPlaceResponse = await fetch(`${baseUrl}/admin/places`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-mock-user-id": "user_001"
+        },
+        body: JSON.stringify({
+          name_zh: "地图草稿地点",
+          name_en: "Draft Map Place",
+          category_level_1: "service",
+          category_level_2: "community",
+          address_zh: "成都",
+          address_en: "Chengdu",
+          location: { latitude: 30.616, longitude: 104.063 },
+          business_hours_zh: "周一至周日",
+          business_hours_en: "Mon-Sun",
+          intro_zh: "草稿",
+          intro_en: "Draft",
+          gallery_file_ids: [],
+          gallery_urls: [],
+          tencent_map_poi_id: null
+        })
+      });
+      const draftPlaceData = await createDraftPlaceResponse.json();
+      expect(createDraftPlaceResponse.status).toBe(201);
+
+      const markersAfterResponse = await fetch(`${baseUrl}/places/map-markers`);
+      const markersAfterData = await markersAfterResponse.json();
+      expect(markersAfterResponse.status).toBe(200);
+      expect(
+        markersAfterData.data.some(
+          (item: { _id: string }) => item._id === draftPlaceData.data._id
+        )
+      ).toBe(false);
 
       const announcementsResponse = await fetch(`${baseUrl}/announcements`);
       expect(announcementsResponse.status).toBe(200);

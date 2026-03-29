@@ -8,6 +8,7 @@ import type {
   FileAsset,
   Notification,
   Place,
+  PlaceMapMarker,
   Post
 } from "../types/entities";
 import type { ApiResult, PageResult } from "../types/common";
@@ -43,7 +44,9 @@ export interface CommunityMapApiClient {
         attendee_count: number;
         source_channel: string;
       }
-    ): Promise<ApiResult<{ registration: EventRegistration; ticket: EventTicket }>>;
+    ): Promise<
+      ApiResult<{ registration: EventRegistration; ticket: EventTicket }>
+    >;
     myRegistrations(): Promise<ApiResult<EventRegistration[]>>;
     registrationTicket(registrationId: string): Promise<ApiResult<EventTicket>>;
   };
@@ -77,7 +80,7 @@ export interface CommunityMapApiClient {
       keyword?: string;
     }): Promise<ApiResult<PageResult<Place>>>;
     detail(id: string): Promise<ApiResult<Place>>;
-    mapMarkers(): Promise<ApiResult<Array<Pick<Place, "_id" | "name_zh" | "name_en" | "location">>>>;
+    mapMarkers(): Promise<ApiResult<PlaceMapMarker[]>>;
   };
   announcements: {
     list(): Promise<ApiResult<PageResult<Announcement>>>;
@@ -104,16 +107,19 @@ export interface CommunityMapApiClient {
       cloud_path: string;
       visibility: "public" | "private";
     }): Promise<ApiResult<FileAsset>>;
-    privateUrl(input: { file_id: string }): Promise<
-      ApiResult<{ temp_url: string; expires_at: string }>
-    >;
+    privateUrl(input: {
+      file_id: string;
+    }): Promise<ApiResult<{ temp_url: string; expires_at: string }>>;
   };
   admin: {
     createEvent(input: Partial<Event>): Promise<ApiResult<Event>>;
     updateEvent(id: string, input: Partial<Event>): Promise<ApiResult<Event>>;
     reviewEvent(
       id: string,
-      input: { review_status: Event["review_status"]; publish_status?: Event["publish_status"] }
+      input: {
+        review_status: Event["review_status"];
+        publish_status?: Event["publish_status"];
+      }
     ): Promise<ApiResult<Event>>;
     checkinEvent(
       id: string,
@@ -163,7 +169,9 @@ export const createMockClient = (
         return ok(service.events.listMyRegistrations(actorId));
       },
       async registrationTicket(registrationId) {
-        return ok(service.events.getTicketByRegistration(registrationId) as EventTicket);
+        return ok(
+          service.events.getTicketByRegistration(registrationId) as EventTicket
+        );
       }
     },
     discover: {

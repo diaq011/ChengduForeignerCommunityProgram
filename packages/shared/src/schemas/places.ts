@@ -2,6 +2,17 @@ import { z } from "zod";
 
 import { PlaceSchema } from "./entities";
 
+export const PlaceMapMarkerSchema = z.object({
+  _id: z.string(),
+  name_zh: z.string(),
+  name_en: z.string(),
+  category_level_1: z.string(),
+  location: z.object({
+    latitude: z.number(),
+    longitude: z.number()
+  })
+});
+
 export const PlaceListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),

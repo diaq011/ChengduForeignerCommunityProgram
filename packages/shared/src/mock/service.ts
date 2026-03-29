@@ -1,12 +1,10 @@
 import type {
-  Announcement,
   AuthSession,
   Comment,
   Event,
   EventRegistration,
   EventTicket,
   FileAsset,
-  Notification,
   Place,
   Post,
   User
@@ -68,7 +66,10 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
 
   return {
     auth: {
-      login(input: { mock_user_id?: string; preferred_language?: "zh" | "en" }) {
+      login(input: {
+        mock_user_id?: string;
+        preferred_language?: "zh" | "en";
+      }) {
         const user = findUser(input.mock_user_id);
         if (input.preferred_language) {
           user.preferred_language = input.preferred_language;
@@ -148,7 +149,9 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
         }
 
         return (
-          state.tickets.find((ticket) => ticket._id === registration.ticket_id) ?? null
+          state.tickets.find(
+            (ticket) => ticket._id === registration.ticket_id
+          ) ?? null
         );
       },
       create(input: Partial<Event>, actorId?: string) {
@@ -192,7 +195,10 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
       },
       review(
         id: string,
-        input: { review_status: Event["review_status"]; publish_status?: Event["publish_status"] }
+        input: {
+          review_status: Event["review_status"];
+          publish_status?: Event["publish_status"];
+        }
       ) {
         const existing = state.events.find((event) => event._id === id);
         if (!existing) {
@@ -248,7 +254,11 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
         state.posts.unshift(post);
         return post;
       },
-      createComment(postId: string, input: Pick<Comment, "content" | "language">, actorId?: string) {
+      createComment(
+        postId: string,
+        input: Pick<Comment, "content" | "language">,
+        actorId?: string
+      ) {
         const comment: Comment = {
           _id: idFrom("comment"),
           post_id: postId,
@@ -293,12 +303,18 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
         return state.places.find((place) => place._id === id) ?? null;
       },
       mapMarkers() {
-        return state.places.map((place) => ({
-          _id: place._id,
-          name_zh: place.name_zh,
-          name_en: place.name_en,
-          location: place.location
-        }));
+        return state.places
+          .filter(
+            (place) =>
+              place.community_id === "tongzilin" && place.status === "published"
+          )
+          .map((place) => ({
+            _id: place._id,
+            name_zh: place.name_zh,
+            name_en: place.name_en,
+            category_level_1: place.category_level_1,
+            location: place.location
+          }));
       },
       create(input: Partial<Place>) {
         const place: Place = {
@@ -372,13 +388,16 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
           expires_in: 900
         };
       },
-      complete(input: {
-        biz_type: string;
-        biz_id: string;
-        file_id: string;
-        cloud_path: string;
-        visibility: FileAsset["visibility"];
-      }, actorId?: string) {
+      complete(
+        input: {
+          biz_type: string;
+          biz_id: string;
+          file_id: string;
+          cloud_path: string;
+          visibility: FileAsset["visibility"];
+        },
+        actorId?: string
+      ) {
         const asset: FileAsset = {
           _id: idFrom("file"),
           file_id: input.file_id,

@@ -9,6 +9,7 @@ import type {
   Notification,
   PageResult,
   Place,
+  PlaceMapMarker,
   Post,
   User
 } from "@community-map/shared";
@@ -41,12 +42,17 @@ export interface ApiProvider {
       actorId?: string
     ): Promise<{ registration: EventRegistration; ticket: EventTicket }>;
     listMyRegistrations(actorId?: string): Promise<EventRegistration[]>;
-    getTicketByRegistration(registrationId: string): Promise<EventTicket | null>;
+    getTicketByRegistration(
+      registrationId: string
+    ): Promise<EventTicket | null>;
     create(input: Partial<Event>, actorId?: string): Promise<Event>;
     update(id: string, input: Partial<Event>): Promise<Event | null>;
     review(
       id: string,
-      input: { review_status: Event["review_status"]; publish_status?: Event["publish_status"] }
+      input: {
+        review_status: Event["review_status"];
+        publish_status?: Event["publish_status"];
+      }
     ): Promise<Event | null>;
     checkin(id: string, ticketId: string): Promise<EventTicket | null>;
   };
@@ -78,14 +84,15 @@ export interface ApiProvider {
       communityId?: string;
     }): Promise<PageResult<Place>>;
     detail(id: string): Promise<Place | null>;
-    mapMarkers(): Promise<
-      Array<Pick<Place, "_id" | "name_zh" | "name_en" | "location">>
-    >;
+    mapMarkers(): Promise<PlaceMapMarker[]>;
     create(input: Partial<Place>): Promise<Place>;
     update(id: string, input: Partial<Place>): Promise<Place | null>;
   };
   announcements: {
-    list(input: { page?: number; pageSize?: number }): Promise<PageResult<Announcement>>;
+    list(input: {
+      page?: number;
+      pageSize?: number;
+    }): Promise<PageResult<Announcement>>;
     detail(id: string): Promise<Announcement | null>;
   };
   notifications: {

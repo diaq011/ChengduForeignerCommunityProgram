@@ -18,18 +18,41 @@ onLoad(async (query) => {
 });
 
 const openNavigation = () => {
-  uni.showToast({
-    title: "后续接入腾讯地图导航",
-    icon: "none"
+  if (!place.value) {
+    return;
+  }
+
+  uni.openLocation({
+    latitude: place.value.location.latitude,
+    longitude: place.value.location.longitude,
+    name: pickLocalized(state.locale, place.value.name_zh, place.value.name_en),
+    address: pickLocalized(
+      state.locale,
+      place.value.address_zh,
+      place.value.address_en
+    ),
+    scale: 16,
+    fail: () => {
+      uni.showToast({
+        title: "打开导航失败",
+        icon: "none"
+      });
+    }
   });
 };
 </script>
 
 <template>
   <view class="page" v-if="place">
-    <SectionPanel :title="pickLocalized(state.locale, place.name_zh, place.name_en)">
-      <view class="line">{{ pickLocalized(state.locale, place.address_zh, place.address_en) }}</view>
-      <view class="line">{{ pickLocalized(state.locale, place.intro_zh, place.intro_en) }}</view>
+    <SectionPanel
+      :title="pickLocalized(state.locale, place.name_zh, place.name_en)"
+    >
+      <view class="line">{{
+        pickLocalized(state.locale, place.address_zh, place.address_en)
+      }}</view>
+      <view class="line">{{
+        pickLocalized(state.locale, place.intro_zh, place.intro_en)
+      }}</view>
       <button class="primary" @click="openNavigation">导航占位</button>
     </SectionPanel>
   </view>

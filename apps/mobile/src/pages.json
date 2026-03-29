@@ -51,7 +51,7 @@
     {
       "path": "pages/places/map",
       "style": {
-        "navigationBarTitleText": "地图占位"
+        "navigationBarTitleText": "地点地图"
       }
     },
     {

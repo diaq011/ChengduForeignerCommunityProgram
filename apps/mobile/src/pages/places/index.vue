@@ -31,10 +31,19 @@ onMounted(load);
 <template>
   <view class="page">
     <SectionPanel title="Places" subtitle="地点列表、详情和地图入口已预留">
-      <button class="primary" @click="openMap">查看地图占位</button>
-      <view v-for="place in places" :key="place._id" class="card" @click="openDetail(place._id)">
-        <view class="card-title">{{ pickLocalized(state.locale, place.name_zh, place.name_en) }}</view>
-        <view class="card-text">{{ pickLocalized(state.locale, place.address_zh, place.address_en) }}</view>
+      <button class="primary" @click="openMap">查看地图</button>
+      <view
+        v-for="place in places"
+        :key="place._id"
+        class="card"
+        @click="openDetail(place._id)"
+      >
+        <view class="card-title">{{
+          pickLocalized(state.locale, place.name_zh, place.name_en)
+        }}</view>
+        <view class="card-text">{{
+          pickLocalized(state.locale, place.address_zh, place.address_en)
+        }}</view>
       </view>
     </SectionPanel>
   </view>

@@ -1,5 +1,12 @@
+import { z } from "zod";
+
 import { defineContract } from "./define-contract";
-import { CreatePlaceInputSchema, PlaceListQuerySchema, UpdatePlaceInputSchema } from "../schemas/places";
+import {
+  CreatePlaceInputSchema,
+  PlaceListQuerySchema,
+  PlaceMapMarkerSchema,
+  UpdatePlaceInputSchema
+} from "../schemas/places";
 import { PlaceSchema } from "../schemas/entities";
 
 export const placeContracts = {
@@ -17,7 +24,7 @@ export const placeContracts = {
   mapMarkers: defineContract({
     method: "GET",
     path: "/places/map-markers",
-    response: PlaceSchema
+    response: z.array(PlaceMapMarkerSchema)
   }),
   adminCreate: defineContract({
     method: "POST",

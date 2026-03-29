@@ -6,6 +6,7 @@ import {
   FileAssetSchema,
   LocaleSchema,
   PageResultSchema,
+  PlaceMapMarkerSchema,
   PlaceSchema,
   PostSchema,
   UserSchema
@@ -37,6 +38,21 @@ describe("shared contracts", () => {
     expect(place.name_en).toBe("Tongzilin Community Center");
   });
 
+  it("accepts a place map marker payload", () => {
+    const marker = PlaceMapMarkerSchema.parse({
+      _id: "place_001",
+      name_zh: "桐梓林社区中心",
+      name_en: "Tongzilin Community Center",
+      category_level_1: "public-service",
+      location: {
+        latitude: 30.615,
+        longitude: 104.0625
+      }
+    });
+
+    expect(marker.category_level_1).toBe("public-service");
+  });
+
   it("rejects invalid locale fields", () => {
     expect(() =>
       UserSchema.parse({
@@ -51,9 +67,7 @@ describe("shared contracts", () => {
   });
 
   it("keeps page envelope, file rules, and enums stable", () => {
-    const successSchema = CreateApiSuccessSchema(
-      PageResultSchema(PostSchema)
-    );
+    const successSchema = CreateApiSuccessSchema(PageResultSchema(PostSchema));
     const fileAsset = FileAssetSchema.parse({
       _id: "file_001",
       file_id: "cloud://id",
@@ -76,7 +90,9 @@ describe("shared contracts", () => {
     });
 
     expect(parsed.data.total).toBe(0);
-    expect(fileAsset.cloud_path).toBe(FILE_PATH_RULES.postImages + "post_001/1.jpg");
+    expect(fileAsset.cloud_path).toBe(
+      FILE_PATH_RULES.postImages + "post_001/1.jpg"
+    );
     expect({
       locales: LocaleSchema.options,
       eventRegistrationStatuses: EVENT_REGISTRATION_STATUSES,

@@ -62,4 +62,41 @@ describe("shared api clients", () => {
       { "x-mock-user-id": "user_001" }
     );
   });
+
+  it("keeps mock and http client signatures aligned for place markers", async () => {
+    const mockClient = createMockClient({ actorId: "user_001" });
+    const requester = vi.fn(async () => ({
+      success: true,
+      requestId: "req_http_002",
+      data: [
+        {
+          _id: "place_http_001",
+          name_zh: "社区中心",
+          name_en: "Community Center",
+          category_level_1: "public-service",
+          location: { latitude: 30.615, longitude: 104.0625 }
+        }
+      ]
+    }));
+    const httpClient = createHttpClient({
+      actorId: "user_001",
+      baseUrl: "http://localhost:8787",
+      requester: requester as unknown as HttpRequester
+    });
+
+    const mockResult = await mockClient.places.mapMarkers();
+    const httpResult = await httpClient.places.mapMarkers();
+
+    expect(mockResult.success).toBe(true);
+    expect(httpResult.success).toBe(true);
+    expect(mockResult.data[0]).toHaveProperty("category_level_1");
+    expect(httpResult.data[0]).toHaveProperty("category_level_1");
+    expect(httpResult.data[0]).not.toHaveProperty("address_zh");
+    expect(requester).toHaveBeenCalledWith(
+      "GET",
+      "http://localhost:8787/places/map-markers",
+      undefined,
+      { "x-mock-user-id": "user_001" }
+    );
+  });
 });
