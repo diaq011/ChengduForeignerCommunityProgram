@@ -186,6 +186,7 @@ export const createMockDataset = (): MockDataset => ({
       author_user_id: "user_002",
       content: "社区中心附近有一家口碑不错的母婴店。",
       language: "zh",
+      parent_id: null,
       created_at: "2026-03-28T09:30:00+08:00"
     }
   ],

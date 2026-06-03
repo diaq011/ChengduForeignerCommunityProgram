@@ -18,6 +18,8 @@ interface PageParams {
   page?: number;
   pageSize?: number;
   keyword?: string;
+  tagId?: string;
+  includeHidden?: boolean;
 }
 
 const DEFAULT_PAGE = 1;
@@ -227,8 +229,10 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
       list(params: PageParams = {}) {
         const posts = state.posts.filter(
           (post) =>
-            keywordMatch(post.title, params.keyword) ||
-            keywordMatch(post.content, params.keyword)
+            (params.includeHidden || post.status === "visible") &&
+            (!params.tagId || post.tag_ids.includes(params.tagId)) &&
+            (keywordMatch(post.title, params.keyword) ||
+              keywordMatch(post.content, params.keyword))
         );
 
         return paginate(posts, params);
@@ -256,7 +260,9 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
       },
       createComment(
         postId: string,
-        input: Pick<Comment, "content" | "language">,
+        input: Pick<Comment, "content" | "language"> & {
+          parent_id?: string | null;
+        },
         actorId?: string
       ) {
         const comment: Comment = {
@@ -265,10 +271,17 @@ export const createMockService = (seed?: Partial<MockDataset>) => {
           author_user_id: findUser(actorId)._id,
           content: input.content,
           language: input.language,
+          parent_id: input.parent_id ?? null,
           created_at: new Date().toISOString()
         };
         state.comments.unshift(comment);
         return comment;
+      },
+      listComments(postId: string, params: PageParams = {}) {
+        return paginate(
+          state.comments.filter((comment) => comment.post_id === postId),
+          params
+        );
       },
       report(id: string) {
         const post = state.posts.find((item) => item._id === id);

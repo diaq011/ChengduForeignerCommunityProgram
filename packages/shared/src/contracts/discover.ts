@@ -1,5 +1,6 @@
 import { defineContract } from "./define-contract";
 import {
+  CommentListQuerySchema,
   CreateCommentInputSchema,
   CreatePostInputSchema,
   ModeratePostInputSchema,
@@ -30,6 +31,12 @@ export const discoverContracts = {
     method: "POST",
     path: "/discover/posts/:id/comments",
     request: CreateCommentInputSchema,
+    response: CommentSchema
+  }),
+  listComments: defineContract({
+    method: "GET",
+    path: "/discover/posts/:id/comments",
+    request: CommentListQuerySchema,
     response: CommentSchema
   }),
   reportPost: defineContract({

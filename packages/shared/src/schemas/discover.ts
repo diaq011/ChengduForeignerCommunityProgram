@@ -6,7 +6,16 @@ export const PostListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
   communityId: z.string().default("tongzilin"),
-  keyword: z.string().trim().optional()
+  keyword: z.string().trim().optional(),
+  tagId: z.string().trim().optional(),
+  includeHidden: z
+    .preprocess((value) => value === true || value === "true", z.boolean())
+    .default(false)
+});
+
+export const CommentListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(20)
 });
 
 export const CreatePostInputSchema = PostSchema.pick({
@@ -23,6 +32,8 @@ export const CreatePostInputSchema = PostSchema.pick({
 export const CreateCommentInputSchema = CommentSchema.pick({
   content: true,
   language: true
+}).extend({
+  parent_id: z.string().nullable().default(null)
 });
 
 export const ReportPostInputSchema = z.object({

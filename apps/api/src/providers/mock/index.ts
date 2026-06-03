@@ -59,6 +59,9 @@ export const createMockProvider = (): ApiProvider => {
       async createComment(postId, input, actorId) {
         return service.posts.createComment(postId, input, actorId);
       },
+      async listComments(postId, input) {
+        return service.posts.listComments(postId, input);
+      },
       async report(id) {
         return service.posts.report(id);
       },

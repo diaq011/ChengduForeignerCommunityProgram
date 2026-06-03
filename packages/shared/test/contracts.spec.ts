@@ -8,6 +8,7 @@ import {
   PageResultSchema,
   PlaceMapMarkerSchema,
   PlaceSchema,
+  CommentSchema,
   PostSchema,
   UserSchema
 } from "@community-map/shared";
@@ -51,6 +52,19 @@ describe("shared contracts", () => {
     });
 
     expect(marker.category_level_1).toBe("public-service");
+  });
+
+  it("keeps comment parent references optional for future replies", () => {
+    const comment = CommentSchema.parse({
+      _id: "comment_001",
+      post_id: "post_001",
+      author_user_id: "user_001",
+      content: "欢迎来到桐梓林。",
+      language: "zh",
+      created_at: "2026-03-28T09:30:00+08:00"
+    });
+
+    expect(comment.parent_id).toBeNull();
   });
 
   it("rejects invalid locale fields", () => {

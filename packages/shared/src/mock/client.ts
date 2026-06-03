@@ -56,6 +56,8 @@ export interface CommunityMapApiClient {
       pageSize?: number;
       communityId?: string;
       keyword?: string;
+      tagId?: string;
+      includeHidden?: boolean;
     }): Promise<ApiResult<PageResult<Post>>>;
     detailPost(id: string): Promise<ApiResult<Post>>;
     createPost(input: {
@@ -69,8 +71,16 @@ export interface CommunityMapApiClient {
     }): Promise<ApiResult<Post>>;
     createComment(
       postId: string,
-      input: { content: string; language: "zh" | "en" }
+      input: { content: string; language: "zh" | "en"; parent_id?: string | null }
     ): Promise<ApiResult<Comment>>;
+    listComments(
+      postId: string,
+      query?: { page?: number; pageSize?: number }
+    ): Promise<ApiResult<PageResult<Comment>>>;
+    reportPost(
+      postId: string,
+      input: { reason: string; description?: string }
+    ): Promise<ApiResult<Post>>;
   };
   places: {
     list(query?: {
@@ -186,6 +196,12 @@ export const createMockClient = (
       },
       async createComment(postId, input) {
         return ok(service.posts.createComment(postId, input, actorId));
+      },
+      async listComments(postId, query) {
+        return ok(service.posts.listComments(postId, query));
+      },
+      async reportPost(postId) {
+        return ok(service.posts.report(postId) as Post);
       }
     },
     places: {

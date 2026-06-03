@@ -26,6 +26,7 @@ export const createCloudbaseProvider = (): ApiProvider => ({
     detail: notImplemented,
     create: notImplemented,
     createComment: notImplemented,
+    listComments: notImplemented,
     report: notImplemented,
     moderate: notImplemented
   },

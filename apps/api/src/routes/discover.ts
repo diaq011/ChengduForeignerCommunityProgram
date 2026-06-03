@@ -1,5 +1,6 @@
 import Router from "@koa/router";
 import {
+  CommentListQuerySchema,
   CreateCommentInputSchema,
   CreatePostInputSchema,
   ModeratePostInputSchema,
@@ -40,6 +41,12 @@ export const registerDiscoverRoutes = (router: Router) => {
       ctx.state.actor._id
     );
     sendSuccess(ctx, comment, 201);
+  });
+
+  router.get("/discover/posts/:id/comments", async (ctx) => {
+    const query = parseOrThrow(CommentListQuerySchema, ctx.query);
+    const data = await ctx.state.provider.posts.listComments(ctx.params.id, query);
+    sendSuccess(ctx, data);
   });
 
   router.post("/discover/posts/:id/report", async (ctx) => {

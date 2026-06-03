@@ -62,14 +62,22 @@ export interface ApiProvider {
       pageSize?: number;
       keyword?: string;
       communityId?: string;
+      tagId?: string;
+      includeHidden?: boolean;
     }): Promise<PageResult<Post>>;
     detail(id: string): Promise<Post | null>;
     create(input: Partial<Post>, actorId?: string): Promise<Post>;
     createComment(
       postId: string,
-      input: Pick<Comment, "content" | "language">,
+      input: Pick<Comment, "content" | "language"> & {
+        parent_id?: string | null;
+      },
       actorId?: string
     ): Promise<Comment>;
+    listComments(
+      postId: string,
+      input: { page?: number; pageSize?: number }
+    ): Promise<PageResult<Comment>>;
     report(id: string): Promise<Post | null>;
     moderate(
       id: string,

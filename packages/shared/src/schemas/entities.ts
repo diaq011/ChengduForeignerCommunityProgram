@@ -117,6 +117,7 @@ export const CommentSchema = z.object({
   author_user_id: z.string(),
   content: z.string(),
   language: LocaleSchema,
+  parent_id: z.string().nullable().default(null),
   created_at: z.string()
 });
 

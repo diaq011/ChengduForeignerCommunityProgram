@@ -92,6 +92,96 @@ describe("api routes", () => {
         })
       });
       expect(createPostResponse.status).toBe(201);
+      const createdPostData = await createPostResponse.json();
+
+      const taggedPostsResponse = await fetch(
+        `${baseUrl}/discover/posts?tagId=help`
+      );
+      const taggedPostsData = await taggedPostsResponse.json();
+      expect(taggedPostsResponse.status).toBe(200);
+      expect(
+        taggedPostsData.data.items.every((post: { tag_ids: string[] }) =>
+          post.tag_ids.includes("help")
+        )
+      ).toBe(true);
+
+      const createCommentResponse = await fetch(
+        `${baseUrl}/discover/posts/${createdPostData.data._id}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            content: "This is useful, thanks!",
+            language: "en",
+            parent_id: null
+          })
+        }
+      );
+      expect(createCommentResponse.status).toBe(201);
+
+      const commentsResponse = await fetch(
+        `${baseUrl}/discover/posts/${createdPostData.data._id}/comments`
+      );
+      const commentsData = await commentsResponse.json();
+      expect(commentsResponse.status).toBe(200);
+      expect(commentsData.data.items[0].content).toBe("This is useful, thanks!");
+
+      const reportResponse = await fetch(
+        `${baseUrl}/discover/posts/${createdPostData.data._id}/report`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            reason: "spam",
+            description: "test report"
+          })
+        }
+      );
+      const reportedPostData = await reportResponse.json();
+      expect(reportResponse.status).toBe(200);
+      expect(reportedPostData.data.review_status).toBe("reported");
+
+      const moderateResponse = await fetch(
+        `${baseUrl}/admin/discover/posts/${createdPostData.data._id}/moderation`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-mock-user-id": "user_001"
+          },
+          body: JSON.stringify({
+            review_status: "hidden",
+            reason: "reported content"
+          })
+        }
+      );
+      const moderatedPostData = await moderateResponse.json();
+      expect(moderateResponse.status).toBe(200);
+      expect(moderatedPostData.data.status).toBe("hidden");
+
+      const publicPostsAfterModeration = await fetch(`${baseUrl}/discover/posts`);
+      const publicPostsAfterModerationData =
+        await publicPostsAfterModeration.json();
+      expect(
+        publicPostsAfterModerationData.data.items.some(
+          (post: { _id: string }) => post._id === createdPostData.data._id
+        )
+      ).toBe(false);
+
+      const adminPostsAfterModeration = await fetch(
+        `${baseUrl}/discover/posts?includeHidden=true`
+      );
+      const adminPostsAfterModerationData =
+        await adminPostsAfterModeration.json();
+      expect(
+        adminPostsAfterModerationData.data.items.some(
+          (post: { _id: string }) => post._id === createdPostData.data._id
+        )
+      ).toBe(true);
 
       const placesResponse = await fetch(`${baseUrl}/places`);
       const placesData = await placesResponse.json();

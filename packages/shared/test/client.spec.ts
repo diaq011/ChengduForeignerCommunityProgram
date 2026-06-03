@@ -99,4 +99,99 @@ describe("shared api clients", () => {
       { "x-mock-user-id": "user_001" }
     );
   });
+
+  it("keeps discover feed, comments, and report clients aligned", async () => {
+    const mockClient = createMockClient({ actorId: "user_001" });
+    const requester = vi.fn(async (method: string, url: string) => {
+      if (url.includes("/comments")) {
+        return {
+          success: true,
+          requestId: "req_http_comments",
+          data: {
+            items: [],
+            page: 1,
+            pageSize: 20,
+            total: 0
+          }
+        };
+      }
+      return {
+        success: true,
+        requestId: "req_http_post",
+        data:
+          method === "GET"
+            ? {
+                items: [],
+                page: 1,
+                pageSize: 5,
+                total: 0
+              }
+            : {
+                _id: "post_http_001",
+                author_user_id: "user_001",
+                community_id: "tongzilin",
+                title: "Reported post",
+                content: "Body",
+                language: "en",
+                tag_ids: ["help"],
+                location_text: null,
+                image_file_ids: [],
+                image_urls: [],
+                status: "visible",
+                review_status: "reported"
+              }
+      };
+    });
+    const httpClient = createHttpClient({
+      actorId: "user_001",
+      baseUrl: "http://localhost:8787",
+      requester: requester as unknown as HttpRequester
+    });
+
+    const mockFeed = await mockClient.discover.listPosts({ tagId: "help" });
+    const httpFeed = await httpClient.discover.listPosts({
+      page: 1,
+      pageSize: 5,
+      keyword: "dentist",
+      tagId: "help"
+    });
+    const mockComments = await mockClient.discover.listComments("post_001");
+    const httpComments = await httpClient.discover.listComments("post_001", {
+      page: 1,
+      pageSize: 20
+    });
+    const mockReport = await mockClient.discover.reportPost("post_001", {
+      reason: "spam"
+    });
+    const httpReport = await httpClient.discover.reportPost("post_http_001", {
+      reason: "spam"
+    });
+
+    expect(mockFeed.data.items.every((post) => post.tag_ids.includes("help"))).toBe(
+      true
+    );
+    expect(httpFeed.success).toBe(true);
+    expect(Array.isArray(mockComments.data.items)).toBe(true);
+    expect(httpComments.data.total).toBe(0);
+    expect(mockReport.data.review_status).toBe("reported");
+    expect(httpReport.data.review_status).toBe("reported");
+    expect(requester).toHaveBeenCalledWith(
+      "GET",
+      "http://localhost:8787/discover/posts?page=1&pageSize=5&keyword=dentist&tagId=help",
+      undefined,
+      { "x-mock-user-id": "user_001" }
+    );
+    expect(requester).toHaveBeenCalledWith(
+      "GET",
+      "http://localhost:8787/discover/posts/post_001/comments?page=1&pageSize=20",
+      undefined,
+      { "x-mock-user-id": "user_001" }
+    );
+    expect(requester).toHaveBeenCalledWith(
+      "POST",
+      "http://localhost:8787/discover/posts/post_http_001/report",
+      { reason: "spam" },
+      { "x-mock-user-id": "user_001" }
+    );
+  });
 });

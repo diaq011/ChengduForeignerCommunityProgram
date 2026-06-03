@@ -15,6 +15,7 @@ export const apiPaths = {
     detailPost: (id: string) => `/discover/posts/${id}`,
     createPost: "/discover/posts",
     createComment: (id: string) => `/discover/posts/${id}/comments`,
+    listComments: (id: string) => `/discover/posts/${id}/comments`,
     reportPost: (id: string) => `/discover/posts/${id}/report`
   },
   places: {

@@ -22,6 +22,19 @@ export interface HttpClientOptions {
 const buildUrl = (baseUrl: string, path: string) =>
   `${baseUrl.replace(/\/$/, "")}${path}`;
 
+const withQuery = (
+  path: string,
+  query?: Record<string, string | number | boolean | null | undefined>
+) => {
+  const searchParams = new URLSearchParams();
+  Object.entries(query ?? {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      searchParams.set(key, String(value));
+    }
+  });
+  return searchParams.size > 0 ? `${path}?${searchParams.toString()}` : path;
+};
+
 export const createFetchRequester = (
   fetchImpl: typeof fetch = fetch
 ): HttpRequester => {
@@ -60,16 +73,7 @@ export const createHttpClient = (
       me: () => request("GET", apiPaths.auth.me)
     },
     events: {
-      list: (query) => {
-        const searchParams = new URLSearchParams();
-        Object.entries(query ?? {}).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            searchParams.set(key, String(value));
-          }
-        });
-        const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
-        return request("GET", `${apiPaths.events.list}${suffix}`);
-      },
+      list: (query) => request("GET", withQuery(apiPaths.events.list, query)),
       detail: (id) => request("GET", apiPaths.events.detail(id)),
       register: (id, input) =>
         request("POST", apiPaths.events.createRegistration(id), input),
@@ -78,32 +82,19 @@ export const createHttpClient = (
         request("GET", apiPaths.events.registrationTicket(id))
     },
     discover: {
-      listPosts: (query) => {
-        const searchParams = new URLSearchParams();
-        Object.entries(query ?? {}).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            searchParams.set(key, String(value));
-          }
-        });
-        const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
-        return request("GET", `${apiPaths.discover.listPosts}${suffix}`);
-      },
+      listPosts: (query) =>
+        request("GET", withQuery(apiPaths.discover.listPosts, query)),
       detailPost: (id) => request("GET", apiPaths.discover.detailPost(id)),
       createPost: (input) => request("POST", apiPaths.discover.createPost, input),
       createComment: (id, input) =>
-        request("POST", apiPaths.discover.createComment(id), input)
+        request("POST", apiPaths.discover.createComment(id), input),
+      listComments: (id, query) =>
+        request("GET", withQuery(apiPaths.discover.listComments(id), query)),
+      reportPost: (id, input) =>
+        request("POST", apiPaths.discover.reportPost(id), input)
     },
     places: {
-      list: (query) => {
-        const searchParams = new URLSearchParams();
-        Object.entries(query ?? {}).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            searchParams.set(key, String(value));
-          }
-        });
-        const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
-        return request("GET", `${apiPaths.places.list}${suffix}`);
-      },
+      list: (query) => request("GET", withQuery(apiPaths.places.list, query)),
       detail: (id) => request("GET", apiPaths.places.detail(id)),
       mapMarkers: () => request("GET", apiPaths.places.mapMarkers)
     },
