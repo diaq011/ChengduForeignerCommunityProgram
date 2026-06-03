@@ -3,7 +3,6 @@ import { ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 
 import { mobileApi } from "@/api/client";
-import SectionPanel from "@/components/SectionPanel.vue";
 import type { Comment, Post } from "@/types";
 
 const TAG_LABELS: Record<string, string> = {
@@ -27,6 +26,11 @@ const commentsLoading = ref(false);
 const submittingComment = ref(false);
 const reporting = ref(false);
 const errorMessage = ref("");
+/** True while Chinese/IME composition is active (e.g. pinyin not yet committed). */
+const isComposing = ref(false);
+/** Briefly true after composition ends so Enter to commit IME text does not send. */
+const blockConfirmAfterComposition = ref(false);
+let compositionBlockTimer: ReturnType<typeof setTimeout> | null = null;
 
 const tagLabel = (id: string) => TAG_LABELS[id] ?? id;
 
@@ -53,11 +57,45 @@ const loadPost = async (id: string) => {
     const result = await mobileApi.discover.detailPost(id);
     post.value = result.data;
     await loadComments();
-  } catch (error) {
+  } catch {
     errorMessage.value = "帖子加载失败，请返回后重试。";
   } finally {
     loading.value = false;
   }
+};
+
+const onCompositionStart = () => {
+  isComposing.value = true;
+  if (compositionBlockTimer) {
+    clearTimeout(compositionBlockTimer);
+    compositionBlockTimer = null;
+  }
+  blockConfirmAfterComposition.value = false;
+};
+
+const onCompositionEnd = () => {
+  isComposing.value = false;
+  blockConfirmAfterComposition.value = true;
+  if (compositionBlockTimer) {
+    clearTimeout(compositionBlockTimer);
+  }
+  compositionBlockTimer = setTimeout(() => {
+    blockConfirmAfterComposition.value = false;
+    compositionBlockTimer = null;
+  }, 200);
+};
+
+const shouldIgnoreKeyboardConfirm = () =>
+  isComposing.value || blockConfirmAfterComposition.value;
+
+const onCommentKeyboardConfirm = () => {
+  // Defer so compositionend from the same Enter key runs before we decide to send.
+  setTimeout(() => {
+    if (shouldIgnoreKeyboardConfirm()) {
+      return;
+    }
+    void submitComment();
+  }, 0);
 };
 
 const submitComment = async () => {
@@ -79,9 +117,9 @@ const submitComment = async () => {
     });
     commentValue.value = "";
     await loadComments();
-    uni.showToast({ title: "评论已提交", icon: "success" });
-  } catch (error) {
-    uni.showToast({ title: "评论提交失败", icon: "none" });
+    uni.showToast({ title: "已发送", icon: "success" });
+  } catch {
+    uni.showToast({ title: "发送失败", icon: "none" });
   } finally {
     submittingComment.value = false;
   }
@@ -103,9 +141,9 @@ const reportPost = () => {
           reason: REPORT_REASONS[tapIndex],
           description: "mobile discover report"
         });
-        uni.showToast({ title: "举报已提交", icon: "success" });
-      } catch (error) {
-        uni.showToast({ title: "举报失败，请稍后再试", icon: "none" });
+        uni.showToast({ title: "已举报", icon: "success" });
+      } catch {
+        uni.showToast({ title: "举报失败", icon: "none" });
       } finally {
         reporting.value = false;
       }
@@ -125,180 +163,339 @@ onLoad(async (query) => {
 
 <template>
   <view class="page">
-    <view v-if="loading" class="state">正在加载帖子...</view>
+    <view v-if="loading" class="state">正在加载...</view>
     <view v-else-if="errorMessage" class="state error">{{ errorMessage }}</view>
 
-    <SectionPanel v-if="post" :title="post.title" :subtitle="post.language">
-        <view class="meta">
-          <text>{{ post.language === "en" ? "English" : "中文" }}</text>
-          <text v-if="post.location_text"> · {{ post.location_text }}</text>
+    <template v-else-if="post">
+      <scroll-view scroll-y class="content-scroll">
+        <view class="post-block">
+          <view class="title-row">
+            <text class="post-title">{{ post.title }}</text>
+            <view class="report-link" @click.stop="reportPost">
+              <text class="report-link-text">{{ reporting ? "..." : "举报" }}</text>
+            </view>
+          </view>
+
+          <view v-if="post.location_text" class="post-location">
+            <text class="post-location-text">{{ post.location_text }}</text>
+          </view>
+
+          <view v-if="post.image_urls.length > 0" class="gallery">
+            <image
+              v-for="url in post.image_urls"
+              :key="url"
+              :src="url"
+              mode="widthFix"
+              class="gallery-image"
+            />
+          </view>
+
+          <text class="post-content">{{ post.content }}</text>
+
+          <view v-if="post.tag_ids.length > 0" class="tag-list">
+            <text v-for="tag in post.tag_ids" :key="tag" class="tag-pill">
+              #{{ tagLabel(tag) }}
+            </text>
+          </view>
         </view>
 
-        <view v-if="post.image_urls.length > 0" class="gallery">
-          <image
-            v-for="url in post.image_urls"
-            :key="url"
-            :src="url"
-            mode="aspectFill"
-            class="gallery-image"
+        <view class="comments-block">
+          <view class="comments-header">
+            <text class="comments-title">评论</text>
+            <text class="comments-count">{{ comments.length }}</text>
+          </view>
+
+          <view v-if="commentsLoading" class="comment-empty">
+            <text>加载中...</text>
+          </view>
+          <view v-else-if="comments.length === 0" class="comment-empty">
+            <text>还没有评论，来说点什么吧</text>
+          </view>
+          <view v-else class="comment-list">
+            <view v-for="comment in comments" :key="comment._id" class="comment-item">
+              <view class="comment-avatar">
+                <text class="comment-avatar-text">邻</text>
+              </view>
+              <view class="comment-main">
+                <text class="comment-content">{{ comment.content }}</text>
+                <text class="comment-time">{{ comment.created_at }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <view class="scroll-spacer" />
+      </scroll-view>
+
+      <view class="comment-bar">
+        <view class="comment-input-wrap">
+          <input
+            v-model="commentValue"
+            class="comment-input"
+            maxlength="500"
+            placeholder="说点什么..."
+            confirm-type="done"
+            @compositionstart="onCompositionStart"
+            @compositionend="onCompositionEnd"
+            @confirm="onCommentKeyboardConfirm"
           />
         </view>
-
-        <view class="content">{{ post.content }}</view>
-
-        <view class="tag-list">
-          <text v-for="tag in post.tag_ids" :key="tag" class="tag-pill">
-            #{{ tagLabel(tag) }}
-          </text>
+        <view
+          class="send-btn"
+          :class="{ disabled: submittingComment || !commentValue.trim() }"
+          @click="submitComment"
+        >
+          <text class="send-btn-text">{{ submittingComment ? "..." : "发送" }}</text>
         </view>
-
-        <button class="report" :disabled="reporting" @click="reportPost">
-          {{ reporting ? "提交中..." : "举报内容" }}
-        </button>
-
-        <view class="comment-section">
-          <view class="section-heading">评论</view>
-          <view v-if="commentsLoading" class="comment-state">正在加载评论...</view>
-          <view v-else-if="comments.length === 0" class="comment-state">
-            暂无评论，来写第一条吧。
-          </view>
-          <template v-else>
-            <view v-for="comment in comments" :key="comment._id" class="comment">
-              <view class="comment-meta">
-                {{ comment.language === "en" ? "English" : "中文" }} · {{ comment.created_at }}
-              </view>
-              <view class="comment-content">{{ comment.content }}</view>
-            </view>
-          </template>
-        </view>
-
-        <textarea
-          v-model="commentValue"
-          class="textarea"
-          maxlength="500"
-          placeholder="写下你的评论"
-        />
-        <button class="primary" :disabled="submittingComment" @click="submitComment">
-          {{ submittingComment ? "提交中..." : "发表评论" }}
-        </button>
-    </SectionPanel>
+      </view>
+    </template>
   </view>
 </template>
 
 <style scoped>
 .page {
-  padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f7f7f7;
 }
 
 .state {
-  padding: 48rpx 24rpx;
+  padding: 80rpx 24rpx;
   text-align: center;
-  color: #6b7280;
-  background: #f9fafb;
-  border-radius: 24rpx;
+  color: #999999;
+  font-size: 28rpx;
 }
 
 .state.error {
-  color: #b91c1c;
-  background: #fef2f2;
+  color: #ff2442;
 }
 
-.meta {
-  color: #6b7280;
+.content-scroll {
+  flex: 1;
+  height: 0;
+}
+
+.scroll-spacer {
+  height: calc(120rpx + env(safe-area-inset-bottom));
+}
+
+.post-block {
+  padding: 24rpx 24rpx 16rpx;
+  background: #ffffff;
+}
+
+.title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.post-title {
+  flex: 1;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.45;
+}
+
+.report-link {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48rpx;
+  padding: 0 8rpx;
+}
+
+.report-link-text {
   font-size: 24rpx;
-  margin-bottom: 18rpx;
+  color: #999999;
+  line-height: 1;
+}
+
+.post-location {
+  margin-top: 12rpx;
+}
+
+.post-location-text {
+  font-size: 24rpx;
+  color: #999999;
 }
 
 .gallery {
   display: flex;
+  flex-direction: column;
   gap: 12rpx;
-  overflow-x: auto;
-  margin-bottom: 20rpx;
+  margin-top: 20rpx;
 }
 
 .gallery-image {
-  flex: 0 0 260rpx;
-  width: 260rpx;
-  height: 200rpx;
-  border-radius: 20rpx;
-  background: #f3f4f6;
+  width: 100%;
+  border-radius: 12rpx;
+  background: #f0f0f0;
 }
 
-.content {
-  line-height: 1.7;
+.post-content {
+  display: block;
+  margin-top: 20rpx;
+  font-size: 30rpx;
+  color: #333333;
+  line-height: 1.75;
 }
 
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10rpx;
+  gap: 12rpx;
   margin-top: 20rpx;
 }
 
 .tag-pill {
   padding: 6rpx 14rpx;
-  color: #0f766e;
-  font-size: 22rpx;
-  background: #ecfdf5;
-  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #666666;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  line-height: 1.2;
 }
 
-.report {
-  margin-top: 24rpx;
-  color: #b91c1c;
-  background: #fef2f2;
+.comments-block {
+  margin-top: 16rpx;
+  padding: 24rpx;
+  background: #ffffff;
 }
 
-.comment-section {
-  margin-top: 32rpx;
-  padding-top: 24rpx;
-  border-top: 1rpx solid #e5e7eb;
+.comments-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 20rpx;
 }
 
-.section-heading {
-  margin-bottom: 16rpx;
-  font-size: 30rpx;
+.comments-title {
+  font-size: 28rpx;
   font-weight: 600;
+  color: #1a1a1a;
 }
 
-.comment-state {
-  color: #6b7280;
+.comments-count {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.comment-empty {
+  padding: 40rpx 0;
+  text-align: center;
   font-size: 26rpx;
+  color: #999999;
 }
 
-.comment {
-  padding: 18rpx 0;
-  border-bottom: 1rpx solid #f3f4f6;
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 28rpx;
 }
 
-.comment-meta {
-  color: #9ca3af;
-  font-size: 22rpx;
+.comment-item {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.comment-avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  background: #f0f0f0;
+  border-radius: 50%;
+}
+
+.comment-avatar-text {
+  font-size: 24rpx;
+  color: #999999;
+  line-height: 1;
+}
+
+.comment-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
 }
 
 .comment-content {
-  margin-top: 8rpx;
-  line-height: 1.6;
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 1.55;
 }
 
-.textarea {
+.comment-time {
+  font-size: 22rpx;
+  color: #bbbbbb;
+}
+
+.comment-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+  border-top: 1rpx solid #eeeeee;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.04);
+}
+
+.comment-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  padding: 0 24rpx;
+  background: #f5f5f5;
+  border-radius: 999rpx;
+}
+
+.comment-input {
   width: 100%;
-  box-sizing: border-box;
-  min-height: 180rpx;
-  background: #f9fafb;
-  border-radius: 20rpx;
-  margin-top: 20rpx;
-  padding: 20rpx;
+  height: 72rpx;
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 72rpx;
 }
 
-.primary {
-  margin-top: 20rpx;
-  background: #1d4ed8;
-  color: white;
+.send-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 72rpx;
+  padding: 0 28rpx;
+  background: #ff2442;
+  border-radius: 999rpx;
 }
 
-.primary[disabled] {
-  color: white;
-  background: #93c5fd;
+.send-btn.disabled {
+  opacity: 0.45;
+}
+
+.send-btn-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1;
 }
 </style>

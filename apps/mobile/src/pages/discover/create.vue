@@ -118,35 +118,35 @@ const submit = async () => {
     <view class="field">
       <view class="label">语言</view>
       <view class="segmented">
-        <button
-          class="segment"
+        <view
+          class="segment-chip"
           :class="{ active: form.language === 'zh' }"
           @click="selectLanguage('zh')"
         >
-          中文
-        </button>
-        <button
-          class="segment"
+          <text class="segment-chip-text">中文</text>
+        </view>
+        <view
+          class="segment-chip"
           :class="{ active: form.language === 'en' }"
           @click="selectLanguage('en')"
         >
-          English
-        </button>
+          <text class="segment-chip-text">English</text>
+        </view>
       </view>
     </view>
 
     <view class="field">
       <view class="label">标签（至少选择 1 个）</view>
       <view class="tag-list">
-        <button
+        <view
           v-for="tag in TAG_OPTIONS"
           :key="tag.id"
-          class="tag"
+          class="tag-chip"
           :class="{ active: tagSelected(tag.id) }"
           @click="toggleTag(tag.id)"
         >
-          {{ tag.label }}
-        </button>
+          <text class="tag-chip-text">{{ tag.label }}</text>
+        </view>
       </view>
     </view>
 
@@ -170,26 +170,34 @@ const submit = async () => {
       </view>
     </view>
 
-    <button class="primary" :disabled="!canSubmit" @click="submit">
-      {{ submitting ? "发布中..." : "发布帖子" }}
-    </button>
+    <view
+      class="submit-btn"
+      :class="{ disabled: !canSubmit }"
+      @click="submit"
+    >
+      <text class="submit-btn-text">{{ submitting ? "发布中..." : "发布笔记" }}</text>
+    </view>
   </view>
 </template>
 
 <style scoped>
 .page {
+  min-height: 100vh;
   padding: 24rpx;
+  background: #f7f7f7;
 }
 
 .section-title {
   font-size: 34rpx;
-  font-weight: 600;
-  margin-bottom: 20rpx;
+  font-weight: 700;
+  margin-bottom: 12rpx;
+  color: #1a1a1a;
 }
 
 .section-subtitle {
   margin-bottom: 28rpx;
-  color: #6b7280;
+  color: #999999;
+  font-size: 26rpx;
   line-height: 1.6;
 }
 
@@ -209,8 +217,8 @@ const submit = async () => {
   width: 100%;
   box-sizing: border-box;
   background: #ffffff;
-  border: 1rpx solid #e5e7eb;
-  border-radius: 20rpx;
+  border: none;
+  border-radius: 16rpx;
   padding: 20rpx;
 }
 
@@ -230,17 +238,33 @@ const submit = async () => {
   flex-wrap: wrap;
 }
 
-.segment,
-.tag {
-  color: #374151;
-  background: #f3f4f6;
+.segment-chip,
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 28rpx;
+  background: #ffffff;
   border-radius: 999rpx;
 }
 
-.segment.active,
-.tag.active {
-  color: white;
-  background: #0f766e;
+.segment-chip.active,
+.tag-chip.active {
+  background: #ff2442;
+}
+
+.segment-chip-text,
+.tag-chip-text {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1;
+}
+
+.segment-chip.active .segment-chip-text,
+.tag-chip.active .tag-chip-text {
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .image-input .input {
@@ -283,14 +307,25 @@ const submit = async () => {
   background: #fef2f2;
 }
 
-.primary {
+.submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  background: #1d4ed8;
-  color: white;
+  height: 88rpx;
+  margin-top: 16rpx;
+  background: #ff2442;
+  border-radius: 999rpx;
 }
 
-.primary[disabled] {
-  color: white;
-  background: #93c5fd;
+.submit-btn.disabled {
+  opacity: 0.45;
+}
+
+.submit-btn-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1;
 }
 </style>

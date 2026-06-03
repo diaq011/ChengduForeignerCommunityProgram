@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from "vue";
 
 import { mobileApi } from "@/api/client";
-import SectionPanel from "@/components/SectionPanel.vue";
 import type { Post } from "@/types";
 
 const TAG_OPTIONS = [
@@ -26,12 +25,6 @@ const loadingMore = ref(false);
 const errorMessage = ref("");
 
 const hasMore = computed(() => posts.value.length < total.value);
-const listSubtitle = computed(() =>
-  total.value > 0 ? `已加载 ${posts.value.length}/${total.value} 条社区帖子` : "社区内容流"
-);
-
-const formatLanguage = (language: Post["language"]) =>
-  language === "en" ? "English" : "中文";
 
 const tagLabel = (id: string) =>
   TAG_OPTIONS.find((tag) => tag.id === id)?.label ?? id;
@@ -55,7 +48,7 @@ const load = async (nextPage = 1) => {
       nextPage === 1 ? result.data.items : [...posts.value, ...result.data.items];
     page.value = result.data.page;
     total.value = result.data.total;
-  } catch (error) {
+  } catch {
     errorMessage.value = "内容流加载失败，请稍后再试。";
   } finally {
     loading.value = false;
@@ -94,202 +87,284 @@ onMounted(load);
 
 <template>
   <view class="page">
-    <SectionPanel title="Discover" :subtitle="listSubtitle">
-      <view class="toolbar">
-        <input
-          v-model="keyword"
-          class="search"
-          confirm-type="search"
-          placeholder="搜索帖子标题或正文"
-          @confirm="refresh"
-        />
-        <button class="primary" @click="openCreate">发布帖子</button>
+    <view class="header">
+      <text class="header-title">发现</text>
+      <view class="publish-btn" @click="openCreate">
+        <text class="publish-btn-text">发布</text>
       </view>
+    </view>
 
-      <scroll-view scroll-x class="tag-scroll">
-        <view class="tag-row">
-          <button
-            v-for="tag in TAG_OPTIONS"
-            :key="tag.id || 'all'"
-            class="tag"
-            :class="{ active: activeTag === tag.id }"
-            @click="selectTag(tag.id)"
-          >
-            {{ tag.label }}
-          </button>
+    <view class="search-bar">
+      <input
+        v-model="keyword"
+        class="search-input"
+        confirm-type="search"
+        placeholder="搜索你想看的内容"
+        @confirm="refresh"
+      />
+    </view>
+
+    <scroll-view scroll-x class="tag-scroll" :show-scrollbar="false">
+      <view class="tag-row">
+        <view
+          v-for="tag in TAG_OPTIONS"
+          :key="tag.id || 'all'"
+          class="tag-chip"
+          :class="{ active: activeTag === tag.id }"
+          @click="selectTag(tag.id)"
+        >
+          <text class="tag-chip-text">{{ tag.label }}</text>
         </view>
-      </scroll-view>
+      </view>
+    </scroll-view>
 
-      <view v-if="loading" class="state">正在加载社区内容...</view>
+    <scroll-view scroll-y class="feed-scroll">
+      <view v-if="loading" class="state">正在加载...</view>
       <view v-else-if="errorMessage" class="state error">
-        <view>{{ errorMessage }}</view>
-        <button class="secondary" @click="refresh">重试</button>
+        <text>{{ errorMessage }}</text>
+        <view class="retry-btn" @click="refresh">
+          <text class="retry-btn-text">重试</text>
+        </view>
       </view>
       <view v-else-if="posts.length === 0" class="state">
-        <view>还没有匹配的帖子，试试换个关键词或发布第一条内容。</view>
+        <text>还没有内容，来发布第一条吧</text>
       </view>
 
       <template v-else>
         <view
           v-for="post in posts"
           :key="post._id"
-          class="card"
+          class="note-card"
           @click="openDetail(post._id)"
         >
           <image
             v-if="post.image_urls[0]"
-            class="cover"
+            class="note-cover"
             mode="aspectFill"
             :src="post.image_urls[0]"
           />
-          <view class="card-body">
-            <view class="meta">
-              <text>{{ formatLanguage(post.language) }}</text>
-              <text v-if="post.location_text"> · {{ post.location_text }}</text>
-            </view>
-            <view class="card-title">{{ post.title }}</view>
-            <view class="card-text">{{ post.content }}</view>
-            <view class="tag-list">
-              <text v-for="tag in post.tag_ids" :key="tag" class="tag-pill">
-                #{{ tagLabel(tag) }}
+          <view class="note-body">
+            <text class="note-title">{{ post.title }}</text>
+            <text class="note-desc">{{ post.content }}</text>
+            <view class="note-tags">
+              <text v-for="tag in post.tag_ids" :key="tag" class="note-tag">
+                {{ tagLabel(tag) }}
               </text>
+            </view>
+            <view v-if="post.location_text" class="note-meta">
+              <text class="note-meta-text">{{ post.location_text }}</text>
             </view>
           </view>
         </view>
-      </template>
 
-      <button
-        v-if="posts.length > 0 && hasMore"
-        class="secondary"
-        :disabled="loadingMore"
-        @click="loadMore"
-      >
-        {{ loadingMore ? "加载中..." : "加载更多" }}
-      </button>
-    </SectionPanel>
+        <view
+          v-if="hasMore"
+          class="load-more"
+          @click="loadMore"
+        >
+          <text class="load-more-text">{{ loadingMore ? "加载中..." : "加载更多" }}</text>
+        </view>
+      </template>
+    </scroll-view>
   </view>
 </template>
 
 <style scoped>
 .page {
-  padding: 24rpx;
-}
-
-.toolbar {
   display: flex;
-  gap: 16rpx;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f7f7f7;
+}
+
+.header {
+  display: flex;
   align-items: center;
-  margin-bottom: 20rpx;
+  justify-content: space-between;
+  padding: 20rpx 24rpx 8rpx;
 }
 
-.search {
-  flex: 1;
-  height: 72rpx;
-  background: #f9fafb;
+.header-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.publish-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 28rpx;
+  background: #ff2442;
   border-radius: 999rpx;
-  padding: 0 24rpx;
+}
+
+.publish-btn-text {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.search-bar {
+  padding: 8rpx 24rpx 12rpx;
+}
+
+.search-input {
+  height: 72rpx;
+  padding: 0 28rpx;
   font-size: 28rpx;
-}
-
-.primary {
-  min-width: 180rpx;
-  background: #1d4ed8;
-  color: white;
-}
-
-.secondary {
-  margin-top: 20rpx;
-  color: #1d4ed8;
-  background: #eff6ff;
+  color: #333333;
+  background: #ffffff;
+  border-radius: 999rpx;
 }
 
 .tag-scroll {
+  width: 100%;
   white-space: nowrap;
-  margin-bottom: 16rpx;
+  margin-bottom: 8rpx;
 }
 
 .tag-row {
-  display: flex;
-  gap: 12rpx;
-}
-
-.tag {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
-  height: 58rpx;
-  padding: 0 22rpx;
+  gap: 16rpx;
+  padding: 8rpx 24rpx 12rpx;
+}
+
+.tag-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 28rpx;
+  background: #ffffff;
   border-radius: 999rpx;
-  font-size: 24rpx;
-  color: #374151;
-  background: #f3f4f6;
 }
 
-.tag.active {
-  color: white;
-  background: #0f766e;
+.tag-chip.active {
+  background: #ff2442;
 }
 
-.state {
-  padding: 48rpx 24rpx;
-  text-align: center;
-  color: #6b7280;
-  background: #f9fafb;
-  border-radius: 24rpx;
+.tag-chip-text {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1;
 }
 
-.state.error {
-  color: #b91c1c;
-  background: #fef2f2;
-}
-
-.card {
-  overflow: hidden;
-  margin-top: 20rpx;
-  background: white;
-  border: 1rpx solid #e5e7eb;
-  border-radius: 28rpx;
-  box-shadow: 0 12rpx 28rpx rgba(15, 23, 42, 0.06);
-}
-
-.cover {
-  width: 100%;
-  height: 260rpx;
-  background: #f3f4f6;
-}
-
-.card-body {
-  padding: 24rpx;
-}
-
-.meta {
-  margin-bottom: 10rpx;
-  color: #6b7280;
-  font-size: 24rpx;
-}
-
-.card-title {
-  font-size: 32rpx;
+.tag-chip.active .tag-chip-text {
+  color: #ffffff;
   font-weight: 600;
 }
 
-.card-text {
-  margin-top: 10rpx;
-  color: #6b7280;
-  line-height: 1.6;
+.feed-scroll {
+  flex: 1;
+  height: 0;
+  padding: 0 24rpx 24rpx;
+  box-sizing: border-box;
 }
 
-.tag-list {
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
+  padding: 80rpx 24rpx;
+  color: #999999;
+  font-size: 28rpx;
+}
+
+.state.error {
+  color: #ff2442;
+}
+
+.retry-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 32rpx;
+  background: #ffffff;
+  border-radius: 999rpx;
+}
+
+.retry-btn-text {
+  font-size: 26rpx;
+  color: #ff2442;
+  line-height: 1;
+}
+
+.note-card {
+  overflow: hidden;
+  margin-bottom: 20rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+
+.note-cover {
+  width: 100%;
+  height: 360rpx;
+  background: #f0f0f0;
+}
+
+.note-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 20rpx 24rpx 24rpx;
+}
+
+.note-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.note-desc {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.note-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 10rpx;
-  margin-top: 18rpx;
+  margin-top: 4rpx;
 }
 
-.tag-pill {
-  padding: 6rpx 14rpx;
-  color: #0f766e;
+.note-tag {
+  padding: 4rpx 12rpx;
   font-size: 22rpx;
-  background: #ecfdf5;
-  border-radius: 999rpx;
+  color: #666666;
+  background: #f5f5f5;
+  border-radius: 6rpx;
+  line-height: 1.2;
+}
+
+.note-meta-text {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 0 8rpx;
+}
+
+.load-more-text {
+  font-size: 26rpx;
+  color: #999999;
 }
 </style>
