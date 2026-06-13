@@ -2,7 +2,9 @@
 import { computed, onMounted, ref } from "vue";
 
 import { mobileApi } from "@/api/client";
-import type { Post } from "@/types";
+import type { Post, User } from "@/types";
+
+import { getDiscoverProfile } from "./profile-data";
 
 const TAG_OPTIONS = [
   { id: "", label: "全部" },
@@ -23,6 +25,7 @@ const total = ref(0);
 const loading = ref(false);
 const loadingMore = ref(false);
 const errorMessage = ref("");
+const currentUser = ref<User | null>(null);
 
 const hasMore = computed(() => posts.value.length < total.value);
 
@@ -68,6 +71,12 @@ const openCreate = () => {
   });
 };
 
+const openProfile = (userId?: string) => {
+  uni.navigateTo({
+    url: `/pages/discover/profile${userId ? `?userId=${userId}` : ""}`
+  });
+};
+
 const refresh = () => load(1);
 
 const loadMore = () => {
@@ -82,13 +91,26 @@ const selectTag = (id: string) => {
   refresh();
 };
 
-onMounted(load);
+onMounted(async () => {
+  const session = await mobileApi.auth.me();
+  currentUser.value = session.data.user;
+  await load();
+});
 </script>
 
 <template>
   <view class="page">
     <view class="header">
-      <text class="header-title">发现</text>
+      <view class="header-left">
+        <text class="header-title">发现</text>
+        <image
+          v-if="currentUser"
+          class="header-avatar"
+          mode="aspectFill"
+          :src="currentUser.avatar_url"
+          @click="openProfile(currentUser._id)"
+        />
+      </view>
       <view class="publish-btn" @click="openCreate">
         <text class="publish-btn-text">发布</text>
       </view>
@@ -144,6 +166,19 @@ onMounted(load);
             :src="post.image_urls[0]"
           />
           <view class="note-body">
+            <view
+              class="author-row"
+              @click.stop="openProfile(post.author_user_id)"
+            >
+              <image
+                class="author-avatar"
+                mode="aspectFill"
+                :src="getDiscoverProfile(post.author_user_id).avatar_url"
+              />
+              <text class="author-name">
+                {{ getDiscoverProfile(post.author_user_id).nickname }}
+              </text>
+            </view>
             <text class="note-title">{{ post.title }}</text>
             <text class="note-desc">{{ post.content }}</text>
             <view class="note-tags">
@@ -184,10 +219,25 @@ onMounted(load);
   padding: 20rpx 24rpx 8rpx;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
 .header-title {
   font-size: 40rpx;
   font-weight: 700;
   color: #1a1a1a;
+}
+
+.header-avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border: 3rpx solid #ffffff;
+  border-radius: 50%;
+  background: #e5e7eb;
+  box-shadow: 0 8rpx 20rpx rgba(15, 118, 110, 0.16);
 }
 
 .publish-btn {
@@ -196,7 +246,7 @@ onMounted(load);
   justify-content: center;
   height: 56rpx;
   padding: 0 28rpx;
-  background: #ff2442;
+  background: #0f766e;
   border-radius: 999rpx;
 }
 
@@ -246,7 +296,7 @@ onMounted(load);
 }
 
 .tag-chip.active {
-  background: #ff2442;
+  background: #0f766e;
 }
 
 .tag-chip-text {
@@ -279,7 +329,7 @@ onMounted(load);
 }
 
 .state.error {
-  color: #ff2442;
+  color: #0f766e;
 }
 
 .retry-btn {
@@ -294,7 +344,7 @@ onMounted(load);
 
 .retry-btn-text {
   font-size: 26rpx;
-  color: #ff2442;
+  color: #0f766e;
   line-height: 1;
 }
 
@@ -316,6 +366,28 @@ onMounted(load);
   flex-direction: column;
   gap: 10rpx;
   padding: 20rpx 24rpx 24rpx;
+}
+
+.author-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 2rpx;
+}
+
+.author-avatar {
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+
+.author-name {
+  color: #4b5563;
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .note-title {

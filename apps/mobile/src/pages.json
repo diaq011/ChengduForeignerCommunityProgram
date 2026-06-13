@@ -19,6 +19,18 @@
       }
     },
     {
+      "path": "pages/events/register",
+      "style": {
+        "navigationBarTitleText": "活动报名"
+      }
+    },
+    {
+      "path": "pages/events/ticket",
+      "style": {
+        "navigationBarTitleText": "报名凭证"
+      }
+    },
+    {
       "path": "pages/discover/index",
       "style": {
         "navigationBarTitleText": "Discover"
@@ -34,6 +46,12 @@
       "path": "pages/discover/create",
       "style": {
         "navigationBarTitleText": "发布帖子"
+      }
+    },
+    {
+      "path": "pages/discover/profile",
+      "style": {
+        "navigationBarTitleText": "个人主页"
       }
     },
     {

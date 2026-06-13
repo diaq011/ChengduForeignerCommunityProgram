@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
+import type { Event } from "@/types";
 
 import { mobileApi } from "@/api/client";
 import SectionPanel from "@/components/SectionPanel.vue";
 import { pickLocalized, useAppStore } from "@/stores/app-store";
 
 const { state } = useAppStore();
-const event = ref<any | null>(null);
-const registeredMessage = ref("");
+const event = ref<Event | null>(null);
 
 onLoad(async (query) => {
   if (!query?.id) {
@@ -18,17 +18,14 @@ onLoad(async (query) => {
   event.value = result.data;
 });
 
-const register = async () => {
+const openRegister = () => {
   if (!event.value) {
     return;
   }
-  const result = await mobileApi.events.register(event.value._id, {
-    contact_name: "Jerry",
-    contact_phone: "13800000000",
-    attendee_count: 1,
-    source_channel: "miniapp"
+
+  uni.navigateTo({
+    url: `/pages/events/register?id=${event.value._id}`
   });
-  registeredMessage.value = `报名成功，凭证号 ${result.data.ticket.ticket_code}`;
 };
 </script>
 
@@ -36,10 +33,12 @@ const register = async () => {
   <view class="page" v-if="event">
     <SectionPanel :title="pickLocalized(state.locale, event.title_zh, event.title_en)">
       <view class="line">{{ pickLocalized(state.locale, event.summary_zh, event.summary_en) }}</view>
+      <view class="line">{{ pickLocalized(state.locale, event.content_zh, event.content_en) }}</view>
       <view class="line">{{ event.address_text }}</view>
-      <view class="line">{{ event.start_time }}</view>
-      <button class="primary" @click="register">模拟报名</button>
-      <view v-if="registeredMessage" class="success">{{ registeredMessage }}</view>
+      <view class="line">时间：{{ event.start_time }} - {{ event.end_time }}</view>
+      <view class="line">报名截止：{{ event.signup_deadline }}</view>
+      <view class="line">名额：{{ event.capacity }}</view>
+      <button class="primary" @click="openRegister">立即报名</button>
     </SectionPanel>
   </view>
 </template>
@@ -57,10 +56,5 @@ const register = async () => {
   margin-top: 20rpx;
   background: #0f766e;
   color: white;
-}
-
-.success {
-  margin-top: 16rpx;
-  color: #047857;
 }
 </style>

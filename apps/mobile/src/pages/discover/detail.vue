@@ -5,6 +5,8 @@ import { onLoad } from "@dcloudio/uni-app";
 import { mobileApi } from "@/api/client";
 import type { Comment, Post } from "@/types";
 
+import { getDiscoverProfile } from "./profile-data";
+
 const TAG_LABELS: Record<string, string> = {
   life: "生活",
   help: "求助",
@@ -33,6 +35,12 @@ const blockConfirmAfterComposition = ref(false);
 let compositionBlockTimer: ReturnType<typeof setTimeout> | null = null;
 
 const tagLabel = (id: string) => TAG_LABELS[id] ?? id;
+
+const openProfile = (userId: string) => {
+  uni.navigateTo({
+    url: `/pages/discover/profile?userId=${userId}`
+  });
+};
 
 const loadComments = async () => {
   if (!postId.value) {
@@ -169,6 +177,25 @@ onLoad(async (query) => {
     <template v-else-if="post">
       <scroll-view scroll-y class="content-scroll">
         <view class="post-block">
+          <view
+            class="author-row"
+            @click="openProfile(post.author_user_id)"
+          >
+            <image
+              class="author-avatar"
+              mode="aspectFill"
+              :src="getDiscoverProfile(post.author_user_id).avatar_url"
+            />
+            <view class="author-main">
+              <text class="author-name">
+                {{ getDiscoverProfile(post.author_user_id).nickname }}
+              </text>
+              <text class="author-handle">
+                @{{ post.author_user_id.replace("_", ".") }}
+              </text>
+            </view>
+          </view>
+
           <view class="title-row">
             <text class="post-title">{{ post.title }}</text>
             <view class="report-link" @click.stop="reportPost">
@@ -268,7 +295,7 @@ onLoad(async (query) => {
 }
 
 .state.error {
-  color: #ff2442;
+  color: #0f766e;
 }
 
 .content-scroll {
@@ -283,6 +310,40 @@ onLoad(async (query) => {
 .post-block {
   padding: 24rpx 24rpx 16rpx;
   background: #ffffff;
+}
+
+.author-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  margin-bottom: 22rpx;
+}
+
+.author-avatar {
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+
+.author-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.author-name {
+  color: #111827;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.author-handle {
+  color: #9ca3af;
+  font-size: 23rpx;
+  line-height: 1;
 }
 
 .title-row {
@@ -484,7 +545,7 @@ onLoad(async (query) => {
   justify-content: center;
   height: 72rpx;
   padding: 0 28rpx;
-  background: #ff2442;
+  background: #0f766e;
   border-radius: 999rpx;
 }
 
